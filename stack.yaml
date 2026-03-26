@@ -1,0 +1,10 @@
+version: 1.0
+provider:
+  name: openfaas
+  gateway: http://192.168.49.2:31112
+functions:
+  koushik1:
+    lang: python3-http
+    handler: ./koushik1
+    image: nkoushik30/koushik1:1.0.2
+
