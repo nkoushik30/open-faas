@@ -60,7 +60,7 @@ if minikube status 2>/dev/null | grep -q "Running"; then
   echo "✅ Minikube already running"
 else
   echo "⚙️ Starting Minikube..."
-  minikube start --driver=docker --memory=4096 --cpus=2
+  minikube start --driver=docker --memory=3072 --cpus=2
 fi
 
 # -------------------------------
@@ -113,8 +113,17 @@ kubectl wait --for=condition=Ready pod --all -n openfaas --timeout=300s
 
 # -------------------------------
 # 11. Gateway URL
+# -------------------------------# -------------------------------
+# 11. Gateway URL (Non-blocking)
 # -------------------------------
-GATEWAY_URL=$(minikube service gateway-external -n openfaas --url)
+echo "🌐 Getting OpenFaaS Gateway..."
+
+MINIKUBE_IP=$(minikube ip)
+NODE_PORT=$(kubectl get svc gateway-external -n openfaas -o jsonpath='{.spec.ports[0].nodePort}')
+
+GATEWAY_URL="http://$MINIKUBE_IP:$NODE_PORT"
+
+echo "🌐 Gateway URL: $GATEWAY_URL"
 echo "🌐 Gateway: $GATEWAY_URL"
 
 # -------------------------------
