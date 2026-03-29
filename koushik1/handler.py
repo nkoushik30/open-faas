@@ -1,5 +1,12 @@
-def handle(event, context):
-    return {
-        "statusCode": 202,
-        "body": "Hello from koushik-OpenFaaS version 2"
-    }
+import requests
+
+url = "http://localhost:8080/function/koushik1"
+
+data = {
+    "a": 10,
+    "b": 20
+}
+
+response = requests.post(url, json=data)
+
+print(response.json())

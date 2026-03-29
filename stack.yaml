@@ -6,5 +6,4 @@ functions:
   koushik1:
     lang: python3-http
     handler: ./koushik1
-    image: nkoushik30/koushik1:1.0.2
-
+    image: nkoushik30/koushik1:1.0.4
