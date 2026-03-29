@@ -2,7 +2,7 @@
 
 set -e
 
-echo "🚀 OpenFaaS + Python Setup (Idempotent Mode)"
+echo "🚀 OpenFaaS + Python Setup"
 
 # -------------------------------
 # Helper
