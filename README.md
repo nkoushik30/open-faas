@@ -100,7 +100,7 @@ http://127.0.0.1:8080/function/python-fn
 ### Option 2: curl
 
 ```bash
-curl http://127.0.0.1:8080/function/python-fn
+curl //outputURL
 ```
 
 ---
