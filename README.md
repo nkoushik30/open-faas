@@ -214,3 +214,13 @@ Koushik Nelluri
 ---
 
 ## ⭐ If this helped you, give it a star!
+
+
+Error removing for excecution 
+
+if file is unreachable
+sed -i 's/\r//' openfaas.sh 
+
+
+permission issue
+chmod -R 777 /path/to/your/folder
