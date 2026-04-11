@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+set -o pipefail
 
 echo "🚀 OpenFaaS + Python Setup"
 
@@ -12,13 +13,32 @@ command_exists() {
 }
 
 # -------------------------------
-# 1. System Update
+# 1. Fix APT Issues + Update
 # -------------------------------
+echo "📦 Fixing APT issues..."
+
+# Remove problematic repos (safe cleanup)
+sudo rm -f /etc/apt/sources.list.d/jenkins.list
+sudo rm -f /etc/apt/sources.list.d/mongodb-org-4.4.list
+
+# Add MongoDB 7 key safely (if needed)
+if [ ! -f /usr/share/keyrings/mongodb-server-7.0.gpg ]; then
+  echo "🔑 Adding MongoDB key..."
+  curl -fsSL https://pgp.mongodb.com/server-7.0.asc | \
+    sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
+fi
+
 echo "📦 Updating system..."
-sudo apt update -y
+sudo apt update -y || echo "⚠️ Ignoring APT warnings"
 
 # -------------------------------
-# 2. Docker
+# 2. Install Basic Dependencies
+# -------------------------------
+echo "📦 Installing dependencies..."
+sudo apt install -y curl apt-transport-https ca-certificates gnupg lsb-release
+
+# -------------------------------
+# 3. Docker
 # -------------------------------
 if command_exists docker; then
   echo "✅ Docker already installed"
@@ -31,7 +51,7 @@ else
 fi
 
 # -------------------------------
-# 3. kubectl
+# 4. kubectl
 # -------------------------------
 if command_exists kubectl; then
   echo "✅ kubectl already installed"
@@ -43,7 +63,7 @@ else
 fi
 
 # -------------------------------
-# 4. Minikube
+# 5. Minikube
 # -------------------------------
 if command_exists minikube; then
   echo "✅ Minikube already installed"
@@ -54,7 +74,7 @@ else
 fi
 
 # -------------------------------
-# 5. Start Minikube
+# 6. Start Minikube
 # -------------------------------
 if minikube status 2>/dev/null | grep -q "Running"; then
   echo "✅ Minikube already running"
@@ -64,7 +84,7 @@ else
 fi
 
 # -------------------------------
-# 6. Helm
+# 7. Helm
 # -------------------------------
 if command_exists helm; then
   echo "✅ Helm already installed"
@@ -74,7 +94,7 @@ else
 fi
 
 # -------------------------------
-# 7. OpenFaaS Repo
+# 8. OpenFaaS Repo
 # -------------------------------
 if helm repo list | grep -q openfaas; then
   echo "✅ OpenFaaS repo exists"
@@ -86,13 +106,13 @@ fi
 helm repo update
 
 # -------------------------------
-# 8. Namespaces
+# 9. Namespaces
 # -------------------------------
 kubectl get ns openfaas >/dev/null 2>&1 || kubectl create ns openfaas
 kubectl get ns openfaas-fn >/dev/null 2>&1 || kubectl create ns openfaas-fn
 
 # -------------------------------
-# 9. OpenFaaS Install
+# 10. OpenFaaS Install
 # -------------------------------
 if helm list -n openfaas | grep -q openfaas; then
   echo "✅ OpenFaaS already installed"
@@ -106,15 +126,13 @@ else
 fi
 
 # -------------------------------
-# 10. Wait for Pods
+# 11. Wait for Pods
 # -------------------------------
 echo "⏳ Waiting for pods..."
 kubectl wait --for=condition=Ready pod --all -n openfaas --timeout=300s
 
 # -------------------------------
-# 11. Gateway URL
-# -------------------------------# -------------------------------
-# 11. Gateway URL (Non-blocking)
+# 12. Gateway URL
 # -------------------------------
 echo "🌐 Getting OpenFaaS Gateway..."
 
@@ -124,10 +142,9 @@ NODE_PORT=$(kubectl get svc gateway-external -n openfaas -o jsonpath='{.spec.por
 GATEWAY_URL="http://$MINIKUBE_IP:$NODE_PORT"
 
 echo "🌐 Gateway URL: $GATEWAY_URL"
-echo "🌐 Gateway: $GATEWAY_URL"
 
 # -------------------------------
-# 12. Password
+# 13. Password
 # -------------------------------
 PASSWORD=$(kubectl get secret -n openfaas basic-auth \
   -o jsonpath="{.data.basic-auth-password}" | base64 --decode)
@@ -136,7 +153,7 @@ echo "🔐 Username: admin"
 echo "🔐 Password: $PASSWORD"
 
 # -------------------------------
-# 13. faas-cli
+# 14. faas-cli
 # -------------------------------
 if command_exists faas-cli; then
   echo "✅ faas-cli already installed"
@@ -146,7 +163,7 @@ else
 fi
 
 # -------------------------------
-# 14. Login (only if not logged)
+# 15. Login
 # -------------------------------
 if faas-cli list --gateway $GATEWAY_URL >/dev/null 2>&1; then
   echo "✅ Already logged into OpenFaaS"
@@ -158,7 +175,7 @@ else
 fi
 
 # -------------------------------
-# 15. Python Template
+# 16. Python Template
 # -------------------------------
 if faas-cli template store list | grep -q python3-http; then
   echo "✅ Python template available"
@@ -168,7 +185,7 @@ else
 fi
 
 # -------------------------------
-# 16. Function Creation
+# 17. Function Creation
 # -------------------------------
 FN="python-fn"
 
@@ -180,7 +197,7 @@ else
 fi
 
 # -------------------------------
-# 17. Safe Handler Update
+# 18. Handler Update
 # -------------------------------
 if ! grep -q "Hello from Python FaaS" "$FN/handler.py"; then
   echo "✍️ Updating handler..."
@@ -199,7 +216,7 @@ else
 fi
 
 # -------------------------------
-# 18. Docker Username Check
+# 19. Docker Login
 # -------------------------------
 DOCKER_USER=$(docker info 2>/dev/null | grep Username | awk '{print $2}')
 
@@ -210,7 +227,7 @@ if [ -z "$DOCKER_USER" ]; then
 fi
 
 # -------------------------------
-# 19. Update Image Name
+# 20. Update Image Name
 # -------------------------------
 if ! grep -q "$DOCKER_USER/$FN" "$FN.yml"; then
   echo "✍️ Updating image name..."
@@ -220,7 +237,7 @@ else
 fi
 
 # -------------------------------
-# 20. Deploy Function
+# 21. Deploy Function
 # -------------------------------
 echo "🚀 Deploying function..."
 faas-cli up -f $FN.yml --gateway $GATEWAY_URL
